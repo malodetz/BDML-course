@@ -1,7 +1,7 @@
 from pyflink.common import SimpleStringSchema
 from pyflink.common.typeinfo import Types, RowTypeInfo
 from pyflink.common.watermark_strategy import WatermarkStrategy
-from pyflink.datastream import StreamExecutionEnvironment, TimeCharacteristic
+from pyflink.datastream import StreamExecutionEnvironment, TimeCharacteristic, CheckpointStorage, CheckpointingMode
 from pyflink.datastream.connectors import DeliveryGuarantee
 from pyflink.datastream.connectors.kafka import KafkaSource, \
     KafkaOffsetsInitializer, KafkaSink, KafkaRecordSerializationSchema
@@ -16,6 +16,12 @@ def python_data_stream_example():
     # assertion.
     env.set_parallelism(1)
     env.set_stream_time_characteristic(TimeCharacteristic.EventTime)
+
+    env.enable_checkpointing(10000)
+    env.get_checkpoint_config().set_checkpointing_mode(CheckpointingMode.EXACTLY_ONCE)
+    checkpoint_dir = "file:///opt/pyflink/tmp/checkpoint/logs"
+    env.get_checkpoint_config().set_checkpoint_storage(CheckpointStorage(checkpoint_dir))
+
 
     type_info: RowTypeInfo = Types.ROW_NAMED(['device_id', 'temperature', 'execution_time'],
                                              [Types.LONG(), Types.DOUBLE(), Types.INT()])

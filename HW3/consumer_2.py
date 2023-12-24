@@ -1,9 +1,30 @@
+import time
 from kafka import KafkaConsumer
+from functools import wraps
 
 
-@backoff(tries=10,sleep=60)
-def message_handler(value)->None:
+def backoff(tries, sleep):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            nonlocal tries
+            attempt = 1
+            while attempt <= tries:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    print(f"Retry {attempt}/{tries}, error: {e}, waiting for {sleep} seconds...")
+                    time.sleep(sleep)
+                    attempt += 1
+            raise Exception(f"Failed after {tries} attempts.")
+        return wrapper
+    return decorator
+
+
+@backoff(tries=5, sleep=10)
+def message_handler(value) -> None:
     print(value)
+    raise Exception("Failed to process")
 
 
 def create_consumer():
@@ -19,8 +40,6 @@ def create_consumer():
         # save to db message (kafka) + external
         message_handler(message)
         print(message)
-
-
 
 
 if __name__ == '__main__':

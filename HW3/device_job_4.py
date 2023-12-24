@@ -7,6 +7,7 @@ from pyflink.datastream.connectors.kafka import KafkaSource, \
     KafkaOffsetsInitializer, KafkaSink, KafkaRecordSerializationSchema
 from pyflink.datastream.formats.json import JsonRowDeserializationSchema
 from pyflink.datastream.functions import MapFunction
+from pyflink.datastream.window import Time, SlidingProcessingTimeWindows
 
 
 def python_data_stream_example():
@@ -16,7 +17,6 @@ def python_data_stream_example():
     # assertion.
     env.set_parallelism(1)
     env.set_stream_time_characteristic(TimeCharacteristic.EventTime)
-    
 
     type_info: RowTypeInfo = Types.ROW_NAMED(['device_id', 'temperature', 'execution_time'],
                                              [Types.LONG(), Types.DOUBLE(), Types.INT()])
@@ -42,8 +42,9 @@ def python_data_stream_example():
         .build()
 
     ds = env.from_source(source, WatermarkStrategy.no_watermarks(), "Kafka Source")
-    ds.map(TemperatureFunction(), Types.STRING()) \
-        .sink_to(sink)
+    ds.window_all(SlidingProcessingTimeWindows.of(Time.seconds(10), Time.seconds(5))) \
+        .reduce(lambda v1, v2: v1 if v1.temperature > v2.temperature else v2) \
+        .map(TemperatureFunction(), Types.STRING()).sink_to(sink)
     env.execute_async("Devices preprocessing")
 
 
