@@ -1,4 +1,6 @@
 import time
+import random
+
 from kafka import KafkaConsumer
 from functools import wraps
 
@@ -21,10 +23,12 @@ def backoff(tries, sleep):
     return decorator
 
 
-@backoff(tries=5, sleep=10)
+@backoff(tries=3, sleep=10)
 def message_handler(value) -> None:
+    error = random.choice([True, False])
     print(value)
-    raise Exception("Failed to process")
+    if error:
+        raise Exception("Failed to process")
 
 
 def create_consumer():
